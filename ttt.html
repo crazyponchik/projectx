@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-Нолики</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 5px;
+            margin-top: 20px;
+            margin: 0 auto;
+            max-width: 340px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ccc;
+            font-size: 2.5em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Крестики-Нолики</h1>
+    <div id="board"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const board = document.getElementById('board');
+            let currentPlayer = 'X';
+            let cells = Array.from({ length: 9 });
+
+            function createCell(index) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = index;
+                cell.addEventListener('click', handleCellClick);
+                return cell;
+            }
+
+            function handleCellClick(event) {
+                const index = event.target.dataset.index;
+                if (!cells[index]) {
+                    cells[index] = currentPlayer;
+                    event.target.textContent = currentPlayer;
+                    if (checkWinner()) {
+                        alert(`Игрок ${currentPlayer} победил!`);
+                        resetGame();
+                    } else if (cells.every(cell => cell)) {
+                        alert('Ничья!');
+                        resetGame();
+                    } else {
+                        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                        if (currentPlayer === 'O') {
+                            setTimeout(makeComputerMove, 500);
+                        }
+                    }
+                }
+            }
+
+            function makeComputerMove() {
+                // Проверяем, есть ли возможность выиграть у компьютера
+                const computerMoveIndex = getWinningMoveIndex('O');
+                if (computerMoveIndex !== -1) {
+                    cells[computerMoveIndex] = currentPlayer;
+                    updateCell(computerMoveIndex);
+                } else {
+                    // Проверяем, есть ли возможность блокировать игрока
+                    const playerMoveIndex = getBlockingMoveIndex('X');
+                    if (playerMoveIndex !== -1) {
+                        cells[playerMoveIndex] = currentPlayer;
+                        updateCell(playerMoveIndex);
+                    } else {
+                        // Если нет возможности выиграть или блокировать, выбираем случайную пустую клетку
+                        const emptyCells = cells.reduce((acc, cell, index) => {
+                            if (!cell) {
+                                acc.push(index);
+                            }
+                            return acc;
+                        }, []);
+
+                        if (emptyCells.length > 0) {
+                            const randomIndex = Math.floor(Math.random() * emptyCells.length);
+                            const computerMove = emptyCells[randomIndex];
+                            cells[computerMove] = currentPlayer;
+                            updateCell(computerMove);
+                        }
+                    }
+                }
+
+                if (checkWinner()) {
+                    alert(`Компьютер победил!`);
+                    resetGame();
+                } else if (cells.every(cell => cell)) {
+                    alert('Ничья!');
+                    resetGame();
+                } else {
+                    currentPlayer = 'X';
+                }
+            }
+
+            function getBlockingMoveIndex(playerSymbol) {
+                // Проверяем все выигрышные комбинации
+                const winningCombinations = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтальные линии
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикальные линии
+                    [0, 4, 8], [2, 4, 6]             // диагонали
+                ];
+
+                for (const combination of winningCombinations) {
+                    const [a, b, c] = combination;
+                    const occupiedCells = [cells[a], cells[b], cells[c]];
+
+                    // Если у игрока есть две занятые клетки в выигрышной комбинации
+                    if (occupiedCells.filter(cell => cell === playerSymbol).length === 2 &&
+                        occupiedCells.includes(undefined)) {
+                        // Возвращаем индекс пустой клетки
+                        return combination[occupiedCells.indexOf(undefined)];
+                    }
+                }
+
+                return -1;
+            }
+
+            function getWinningMoveIndex(computerSymbol) {
+                // Проверяем все выигрышные комбинации
+                const winningCombinations = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтальные линии
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикальные линии
+                    [0, 4, 8], [2, 4, 6]             // диагонали
+                ];
+
+                for (const combination of winningCombinations) {
+                    const [a, b, c] = combination;
+                    const occupiedCells = [cells[a], cells[b], cells[c]];
+
+                    // Если у компьютера есть две занятые клетки в выигрышной комбинации
+                    if (occupiedCells.filter(cell => cell === computerSymbol).length === 2 &&
+                        occupiedCells.includes(undefined)) {
+                        // Возвращаем индекс пустой клетки
+                        return combination[occupiedCells.indexOf(undefined)];
+                    }
+                }
+
+                return -1;
+            }
+
+            function updateCell(index) {
+                const computerCell = document.querySelector(`.cell[data-index="${index}"]`);
+                computerCell.textContent = currentPlayer;
+            }
+
+            function checkWinner() {
+                const winningCombinations = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтальные линии
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикальные линии
+                    [0, 4, 8], [2, 4, 6]             // диагонали
+                ];
+
+                return winningCombinations.some(combination => {
+                    const [a, b, c] = combination;
+                    return cells[a] && cells[a] === cells[b] && cells[a] === cells[c];
+                });
+            }
+
+            function resetGame() {
+                cells = Array.from({ length: 9 });
+                board.innerHTML = '';
+                currentPlayer = 'X';
+                initializeBoard();
+            }
+
+            function initializeBoard() {
+                for (let i = 0; i < 9; i++) {
+                    const cell = createCell(i);
+                    board.appendChild(cell);
+                }
+            }
+
+            initializeBoard();
+        });
+    </script>
+</body>
+</html>
